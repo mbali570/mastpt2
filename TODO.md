@@ -1,0 +1,19 @@
+- [x] Add useState for ingredients in AdminScreen
+- [x] Change initial course state to ''
+- [x] Add TextInput for course in the form
+- [x] Add TextInput for ingredients in the form
+- [x] Update addDish function to include ingredients in newDish object
+- [x] Update the reset in addDish to clear ingredients state
+- [x] Add confirmation dialog for removeDish function
+- [x] Add isSpecial field to MenuItem interface
+- [x] Update initial menuItems to include isSpecial: false
+- [x] Add ChefSpecialsScreen component
+- [x] Add navigation to ChefSpecials in HomeScreen
+- [x] Add Stack.Screen for ChefSpecials
+- [x] Add isSpecial state in AdminScreen
+- [x] Update addDish to include isSpecial
+- [x] Update reset to clear isSpecial
+- [x] Update editDish to set isSpecial
+- [x] Add toggle for Chef's Special in Admin form
+- [x] Show "Special" label in Admin list
+- [x] Show "Chef's Special" in MenuDetail if applicable
