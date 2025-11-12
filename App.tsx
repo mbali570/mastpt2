@@ -14,6 +14,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,20 +29,50 @@ interface MenuItem {
   isSpecial: boolean;
 }
 
-const HomeScreen = ({ navigation }: { navigation: any }) => (
-  <View style={styles.homeContainer}>
-    <Text style={styles.title}>Christoffel's Private Culinary</Text>
-    <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('Menu')}>
-      <Text style={styles.buttonText}>View Menu</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('ChefSpecials')}>
-      <Text style={styles.buttonText}>Chef Specials</Text>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('Admin')}>
-      <Text style={styles.buttonText}>Admin Login</Text>
-    </TouchableOpacity>
-  </View>
-);
+const HomeScreen = ({ navigation, menuItems }: { navigation: any; menuItems: MenuItem[] }) => {
+  // Calculate average prices by course
+  const courses = ['Appetizer', 'Main', 'Dessert'];
+  const averages: { [key: string]: number } = {};
+  courses.forEach(course => {
+    const items = menuItems.filter(item => item.course === course);
+    const total = items.reduce((sum, item) => sum + parseFloat(item.price), 0);
+    averages[course] = items.length > 0 ? total / items.length : 0;
+  });
+
+  return (
+    <View style={styles.homeContainer}>
+      <Text style={styles.title}>Christoffel's Private Culinary</Text>
+      <Text style={styles.subtitle}>Menu Overview</Text>
+      {courses.map(course => (
+        <Text key={course} style={styles.averageText}>
+          Average {course} Price: R{averages[course].toFixed(2)}
+        </Text>
+      ))}
+      <FlatList
+        data={menuItems}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MenuDetail', { item })}>
+            <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.menuImage} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemTitle}>{item.name}</Text>
+              {item.course ? <Text style={styles.menuItemDesc}>{item.course}</Text> : null}
+              <Text style={styles.menuItemDesc}>{item.description}</Text>
+              <Text style={styles.price}>R{item.price}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 }}>No dishes yet.</Text>}
+      />
+      <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('ChefManagement')}>
+        <Text style={styles.buttonText}>Chef Management</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('Filter')}>
+        <Text style={styles.buttonText}>Filter Menu</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const MenuScreen = ({ navigation, route, menuItems: propMenuItems }: { navigation: any; route: any; menuItems: MenuItem[] }) => {
   // prefer lifted prop; fallback to navigation param
@@ -126,7 +157,44 @@ const ChefSpecialsScreen = ({ navigation, route, menuItems: propMenuItems }: { n
   );
 };
 
-const AdminScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation: any; menuItems: MenuItem[]; setMenuItems: (items: MenuItem[]) => void }) => {
+const FilterScreen = ({ navigation, menuItems }: { navigation: any; menuItems: MenuItem[] }) => {
+  const [selectedCourse, setSelectedCourse] = useState('All');
+  const courses = ['All', 'Appetizer', 'Main', 'Dessert'];
+  const filteredItems = selectedCourse === 'All' ? menuItems : menuItems.filter(item => item.course === selectedCourse);
+
+  return (
+    <View style={styles.menuContainer}>
+      <Text style={styles.menuTitle}>Filter Menu by Course</Text>
+      <Picker
+        selectedValue={selectedCourse}
+        onValueChange={(itemValue) => setSelectedCourse(itemValue)}
+        style={{ height: 50, width: '100%', marginVertical: 10 }}
+      >
+        {courses.map(course => (
+          <Picker.Item key={course} label={course} value={course} />
+        ))}
+      </Picker>
+      <FlatList
+        data={filteredItems}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MenuDetail', { item })}>
+            <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.menuImage} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuItemTitle}>{item.name}</Text>
+              {item.course ? <Text style={styles.menuItemDesc}>{item.course}</Text> : null}
+              <Text style={styles.menuItemDesc}>{item.description}</Text>
+              <Text style={styles.price}>R{item.price}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={<Text style={{ textAlign: 'center', marginTop: 20 }}>No dishes in this course.</Text>}
+      />
+    </View>
+  );
+};
+
+const ChefManagementScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation: any; menuItems: MenuItem[]; setMenuItems: (items: MenuItem[]) => void }) => {
   const [dishName, setDishName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -175,15 +243,6 @@ const AdminScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation:
     setEditingDishId(null);
   };
 
-  const clearMenu = () => {
-    if (typeof setMenuItems === 'function') {
-      Alert.alert('Confirm', 'Clear all menu items?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear', style: 'destructive', onPress: () => setMenuItems([]) },
-      ]);
-    }
-  };
-
   const removeDish = (id: number) => {
     Alert.alert('Confirm', 'Remove this dish?', [
       { text: 'Cancel', style: 'cancel' },
@@ -208,7 +267,7 @@ const AdminScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation:
 
   return (
     <ScrollView style={styles.adminContainer} contentContainerStyle={{ paddingBottom: 40 }}>
-      <Text style={styles.adminTitle}>Admin Panel</Text>
+      <Text style={styles.adminTitle}>Chef Management</Text>
       <TextInput style={styles.input} placeholder="Dish Name" value={dishName} onChangeText={setDishName} />
       <TextInput style={[styles.input, { height: 90 }]} placeholder="Description" multiline value={description} onChangeText={setDescription} />
       <TextInput style={styles.input} placeholder="Price" keyboardType="numeric" value={price} onChangeText={setPrice} />
@@ -224,9 +283,6 @@ const AdminScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation:
 
       <TouchableOpacity style={styles.addButton} onPress={addDish}>
         <Text style={styles.buttonText}>{editingDishId ? 'Update Dish' : 'Save'}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.deleteButton} onPress={clearMenu}>
-        <Text style={styles.buttonText}>Clear Menu</Text>
       </TouchableOpacity>
 
       <View style={{ marginVertical: 12 }}>
@@ -253,7 +309,7 @@ const AdminScreen = ({ navigation, menuItems = [], setMenuItems }: { navigation:
         )}
       </View>
 
-      <Button title="View Menu" onPress={() => navigation.navigate('Menu')} />
+      <Button title="Back to Home" onPress={() => navigation.navigate('Home')} />
     </ScrollView>
   );
 };
@@ -346,7 +402,9 @@ export default function App() {
   return (
     <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Home">
+          {(props: any) => <HomeScreen {...props} menuItems={menuItems} />}
+        </Stack.Screen>
         <Stack.Screen name="Menu">
           {(props: any) => <MenuScreen {...props} menuItems={menuItems} />}
         </Stack.Screen>
@@ -354,8 +412,11 @@ export default function App() {
           {(props: any) => <ChefSpecialsScreen {...props} menuItems={menuItems} />}
         </Stack.Screen>
         <Stack.Screen name="MenuDetail" component={MenuDetailScreen} />
-        <Stack.Screen name="Admin">
-          {(props: any) => <AdminScreen {...props} menuItems={menuItems} setMenuItems={setMenuItems} />}
+        <Stack.Screen name="ChefManagement">
+          {(props: any) => <ChefManagementScreen {...props} menuItems={menuItems} setMenuItems={setMenuItems} />}
+        </Stack.Screen>
+        <Stack.Screen name="Filter">
+          {(props: any) => <FilterScreen {...props} menuItems={menuItems} />}
         </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
@@ -371,6 +432,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 30, color: '#432818' },
+  subtitle: { fontSize: 18, fontWeight: '600', marginBottom: 10, color: '#6c584c' },
+  averageText: { fontSize: 16, marginVertical: 5, color: '#432818' },
   mainButton: {
     backgroundColor: '#99582a',
     padding: 15,
